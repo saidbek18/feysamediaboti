@@ -1,6 +1,9 @@
 import logging
 import asyncio
 import sqlite3
+from flask import Flask
+from threading import Thread
+import os
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup
 )
@@ -1000,6 +1003,24 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_user_menu(update, context)
     return ConversationHandler.END
 
+
+
+# ===== FLASK (KEEP ALIVE) =====
+app_web = Flask(__name__)
+
+@app_web.route('/')
+def home():
+    return "Bot ishlayapti"
+
+def run():
+    port = int(os.environ.get("PORT", 10000))
+    app_web.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+
 # ==================== MAIN ====================
 
 def main():
@@ -1030,10 +1051,7 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, movie_caption),
             ],
             MOVIE_FILE: [
-                MessageHandler(
-                    filters.VIDEO | filters.PHOTO | filters.Document.ALL,
-                    movie_file
-                ),
+                MessageHandler(filters.VIDEO | filters.PHOTO | filters.Document.ALL, movie_file),
             ],
             DELETE_CODE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, delete_code),
@@ -1053,9 +1071,7 @@ def main():
             SET_POST_CHANNEL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, set_post_channel),
             ],
-            # ===== REKLAMA STATES =====
             ADV_MEDIA: [
-                # Rasm yoki video qabul qiladi
                 MessageHandler(filters.PHOTO | filters.VIDEO, adv_media),
                 CallbackQueryHandler(callback_handler, pattern="^adv_skip_media$"),
             ],
@@ -1063,7 +1079,6 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, adv_caption),
             ],
             ADV_FILE: [
-                # Fayl yoki hujjat qabul qiladi
                 MessageHandler(filters.VIDEO | filters.Document.ALL, adv_file),
                 CallbackQueryHandler(callback_handler, pattern="^adv_skip_file$"),
             ],
@@ -1086,30 +1101,14 @@ def main():
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(callback_handler))
 
-    print("🎬 Bot muvaffaqiyatli ishga tushdi...")
-    app.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=Update.ALL_TYPES
-    )
-from flask import Flask
-from threading import Thread
-import os
+    print("🎬 Bot ishga tushdi...")
 
-app_web = Flask(__name__)
-
-@app_web.route('/')
-def home():
-    return "Bot ishlayapti"
-
-def run():
-    port = int(os.environ.get("PORT", 10000))
-    app_web.run(host='0.0.0.0', port=port)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
+    # 🔥 MUHIM: Flaskni shu yerda chaqirasan
     keep_alive()
-app.run_polling()
+
+    # 🔥 Botni ishga tushirish
+    app.run_polling(drop_pending_updates=True)
+
 
 if __name__ == "__main__":
     main()
