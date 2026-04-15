@@ -1091,7 +1091,25 @@ def main():
         drop_pending_updates=True,
         allowed_updates=Update.ALL_TYPES
     )
+from flask import Flask
+from threading import Thread
+import os
 
+app_web = Flask(__name__)
+
+@app_web.route('/')
+def home():
+    return "Bot ishlayapti"
+
+def run():
+    port = int(os.environ.get("PORT", 10000))
+    app_web.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+    keep_alive()
+app.run_polling()
 
 if __name__ == "__main__":
     main()
